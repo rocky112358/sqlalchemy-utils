@@ -184,7 +184,7 @@ class CompositeType(UserDefinedType, SchemaType):
 
             return CompositeElement(self.expr, key, type_)
 
-    def __init__(self, name, columns):
+    def __init__(self, name, columns, schema='public'):
         if psycopg2 is None:
             raise ImproperlyConfigured(
                 "'psycopg2' package is required in order to use CompositeType."
@@ -192,6 +192,7 @@ class CompositeType(UserDefinedType, SchemaType):
         SchemaType.__init__(self)
         self.name = name
         self.columns = columns
+        self.schema = schema
         if name in registered_composites:
             self.type_cls = registered_composites[name].type_cls
         else:
@@ -267,7 +268,7 @@ class CompositeType(UserDefinedType, SchemaType):
 
 def register_psycopg2_composite(dbapi_connection, composite):
     psycopg2.extras.register_composite(
-        composite.name,
+        "%s.%s" % (composite.schema, composite.name),
         dbapi_connection,
         globally=True,
         factory=composite.caster
@@ -295,7 +296,7 @@ def register_psycopg2_composite(dbapi_connection, composite):
             else value.getquoted()
             for value in adapted
         ]
-        return AsIs("(%s)::%s" % (', '.join(values), composite.name))
+        return AsIs("(%s)::%s.%s" % (', '.join(values), composite.schema, composite.name))
 
     register_adapter(composite.type_cls, adapt_composite)
 
